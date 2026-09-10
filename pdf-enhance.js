@@ -1,16 +1,24 @@
 (() => {
   const DBKEY = 'ficha-autoescuela-v2';
   const XCOLS = [424, 444, 464, 484, 503];
+
   const LAYOUTS = {
-    'B': { fields:{pages:[3,8],xName:130,xTeacher:330,xDate:500,yTop:63}, groups:{
+    'B': { fields:{pages:[3,8],xName:78,xTeacher:240,xDate:408}, groups:{
       'Aprendizaje a motor parado':{page:3,ys:[399,423,447,591,615,639,672]},
       'Automatismos básicos':{page:4,ys:[357,378,396,417,438,456,477]},
       'Dominio de mandos':{page:4,ys:[579,603,627,648,672]},
       'Circulación':{page:5,ys:[264,288,309,333,354,378,399,423,447,468,492]},
       'Condiciones especiales':{page:6,ys:[234,255,279,300,324,348,366,396]},
       'Valoración global':{page:6,ys:[483,504,528,549]}
-    }},
-    'A1/A2': { fields:{pages:[3,8],xName:130,xTeacher:330,xDate:500,yTop:63}, groups:{
+    }, itineraryPage:7,
+    summary:{page:8,groups:{
+      'Aprendizaje a motor parado':{xs:[57,57,57,58,58,58,58],ys:[292,311,329,455,474,502,531]},
+      'Automatismos básicos':{xs:[234,234,234,234,234,234,234],ys:[279,298,316,335,353,372,390]},
+      'Dominio de mandos':{xs:[234,234,234,234,234],ys:[465,484,502,521,539]},
+      'Circulación':{xs:[404,404,404,404,404,404,404,404,404,404,404],ys:[291,319,348,376,395,413,432,451,469,488,507]},
+      'Condiciones especiales':{xs:[404,404,404,404,404,404,404,404],ys:[582,601,619,638,656,675,693,722]}
+    }}},
+    'A1/A2': { fields:{pages:[3,8],xName:78,xTeacher:240,xDate:408}, groups:{
       'Aprendizaje a motor parado':{page:3,ys:[399,423,447,471,495,591,615,639,663]},
       'Automatismos básicos':{page:4,ys:[357,378,396,417,438,456,477]},
       'Dominio de mandos':{page:4,ys:[585,606,630,654,675]},
@@ -18,15 +26,15 @@
       'Circulación':{page:5,ys:[507,531,552,573,594,624,648,669,693,714,735]},
       'Condiciones especiales':{page:6,ys:[222,246,270,294,318,342,366]},
       'Valoración global':{page:6,ys:[453,477,501,525]}
-    }},
-    'AM': { fields:{pages:[3,6],xName:130,xTeacher:330,xDate:500,yTop:63}, groups:{
+    }, itineraryPage:7},
+    'AM': { fields:{pages:[3,6],xName:78,xTeacher:240,xDate:408}, groups:{
       'Aprendizaje a motor parado':{page:3,ys:[399,423,447,471,495,591,615,639,663]},
       'Automatismos básicos':{page:4,ys:[357,378,396,417,438,456,477]},
       'Dominio de mandos':{page:4,ys:[582,606,627,651]},
       'Maniobras específicas':{page:5,ys:[231,255,279,303]},
       'Valoración global':{page:5,ys:[429,462,486,510,534,558,582]}
     }},
-    'C1/C': { fields:{pages:[3,8],xName:130,xTeacher:330,xDate:500,yTop:63}, groups:{
+    'C1/C': { fields:{pages:[3,8],xName:78,xTeacher:240,xDate:408}, groups:{
       'Aprendizaje a motor parado':{page:3,ys:[399,423,447,471,591,615,651,687]},
       'Maniobras específicas':{page:4,ys:[300,321,342,363,381,402]},
       'Automatismos básicos':{page:4,ys:[594,615,639,666,690,711,735]},
@@ -34,8 +42,8 @@
       'Circulación':{page:5,ys:[513,552,570,591,609,639,657,675,693,711,729,750]},
       'Condiciones especiales':{page:6,ys:[234,255,279,300,324,348,366,396,420]},
       'Valoración global':{page:6,ys:[504,525,549,573]}
-    }},
-    'D1/D': { fields:{pages:[3,8],xName:130,xTeacher:330,xDate:500,yTop:63}, groups:{
+    }, itineraryPage:7},
+    'D1/D': { fields:{pages:[3,8],xName:78,xTeacher:240,xDate:408}, groups:{
       'Aprendizaje a motor parado':{page:3,ys:[399,423,447,471,591,615,651,687]},
       'Maniobras específicas':{page:4,ys:[297,318,339,360,378,399]},
       'Automatismos básicos':{page:4,ys:[594,615,639,666,690,711,735]},
@@ -43,8 +51,10 @@
       'Circulación':{page:5,ys:[513,552,570,591,609,639,657,675,693,711,729,750]},
       'Condiciones especiales':{page:6,ys:[234,255,279,300,324,348,366,396,420]},
       'Valoración global':{page:6,ys:[504,525,549,573]}
-    }}
+    }, itineraryPage:7}
   };
+
+  const ITINERARY_TOPS = [176,198,218,238,259,279,298,316,335,353,371,390,408,427,445,464,482,500,519,537,556,574,593,611,629,648,666,685,703,722];
 
   function getActiveContext() {
     const db = JSON.parse(localStorage.getItem(DBKEY) || '{"students":{}}');
@@ -68,15 +78,18 @@
     const a = document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url), 2500);
   }
+
   function stampIdentity(pages,font,student,pdata,layout){
     for (const pi of layout.fields.pages || []) {
       const page = pages[pi]; if (!page) continue;
-      const y = page.getHeight() - layout.fields.yTop;
-      if (student.name) page.drawText(String(student.name).slice(0,48),{x:layout.fields.xName,y,size:8,font});
-      if (student.teacher) page.drawText(String(student.teacher).slice(0,42),{x:layout.fields.xTeacher,y,size:8,font});
+      const top = pi === 3 ? 151 : 143;
+      const y = page.getHeight() - top;
+      if (student.name) page.drawText(String(student.name).slice(0,42),{x:layout.fields.xName,y,size:8,font});
+      if (student.teacher) page.drawText(String(student.teacher).slice(0,38),{x:layout.fields.xTeacher,y,size:8,font});
       if (pdata.started) page.drawText(String(pdata.started),{x:layout.fields.xDate,y,size:8,font});
     }
   }
+
   function stampRatings(pages,font,pdata,permit,layout){
     for (const [group,cfg] of Object.entries(layout.groups || {})) {
       const items = window.DGT_DATA?.[permit]?.practical?.[group] || [];
@@ -89,16 +102,31 @@
       });
     }
   }
-  function addHistory(doc,font,student,permit,pdata){
-    const page = doc.addPage([595.28,841.89]);
-    page.drawText('HISTÓRICO DE CLASES',{x:40,y:800,size:16,font});
-    page.drawText((student.name||'').slice(0,70),{x:40,y:778,size:11,font});
-    page.drawText(window.DGT_DATA[permit].label,{x:40,y:760,size:10,font});
-    let y=732;
-    [...(pdata.history||[])].sort((a,b)=>(a.date||'').localeCompare(b.date||'')).forEach((e,i)=>{
-      if (y<70) return;
-      page.drawText(`${i+1}. ${e.date||''}  ${e.minutes||0} min  ${(e.route||'').slice(0,55)}`.slice(0,95),{x:40,y,size:9,font}); y-=15;
-      if (e.notes) { page.drawText(String(e.notes).slice(0,105),{x:55,y,size:8,font}); y-=13; }
+
+  function stampSummary(pages,font,pdata,permit,layout){
+    if (!layout.summary) return;
+    const page = pages[layout.summary.page]; if (!page) return;
+    const h = page.getHeight();
+    for (const [group,cfg] of Object.entries(layout.summary.groups || {})) {
+      const items = window.DGT_DATA?.[permit]?.practical?.[group] || [];
+      items.forEach((item,i)=>{
+        const value = Number(pdata.practical?.[item]) || 0;
+        if (!value || cfg.xs[i] == null || cfg.ys[i] == null) return;
+        page.drawText('X',{x:cfg.xs[i]-3,y:h-(cfg.ys[i]+4),size:9,font});
+      });
+    }
+  }
+
+  function stampItinerary(pages,font,pdata,layout){
+    if (layout.itineraryPage == null) return;
+    const page = pages[layout.itineraryPage]; if (!page) return;
+    const h = page.getHeight();
+    const history = [...(pdata.history || [])].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+    history.slice(0,30).forEach((entry,i)=>{
+      const route = String(entry.route || '').trim();
+      if (!route) return;
+      const yTop = ITINERARY_TOPS[i];
+      page.drawText(route.slice(0,78),{x:128,y:h-(yTop+9),size:8,font});
     });
   }
 
@@ -116,7 +144,8 @@
       const pages = doc.getPages();
       stampIdentity(pages,font,ctx.student,ctx.pdata,layout);
       stampRatings(pages,font,ctx.pdata,ctx.permit,layout);
-      addHistory(doc,font,ctx.student,ctx.permit,ctx.pdata);
+      stampSummary(pages,font,ctx.pdata,ctx.permit,layout);
+      stampItinerary(pages,font,ctx.pdata,layout);
       downloadBlob(await doc.save(), `Ficha-${(ctx.student.name||'alumno').replace(/[^\w\-]+/g,'_')}-${ctx.permit.replace('/','-')}.pdf`);
     } catch (err) {
       console.error(err); alert('No se ha podido generar el PDF oficial. Comprueba la conexión.');
