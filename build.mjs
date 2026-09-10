@@ -10,6 +10,7 @@ const files = [
   'manifest.webmanifest',
   'sw.js',
   'history-enhance.js',
+  'session-reset.js',
   'pdf-enhance.js'
 ];
 
