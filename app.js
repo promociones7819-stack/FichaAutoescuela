@@ -82,17 +82,17 @@ function drawChart(canvas,pts,label){
  pts.forEach((p,i)=>{const x=pad+i*step,y=h-pad-(Math.max(0,Math.min(5,p.value))/5)*(h-pad*2);ctx.fillStyle="#0878ad";ctx.beginPath();ctx.arc(x,y,6,0,Math.PI*2);ctx.fill();ctx.save();ctx.translate(x,h-16);ctx.rotate(-.45);ctx.fillStyle="#607786";ctx.fillText(p.label||"",0,0);ctx.restore()});
 }
 function renderNotes(){const p=currentPermitData();els.content.innerHTML='<div class="panel"><h2>Notas del permiso</h2><textarea id="permitNotes" style="min-height:360px" placeholder="Observaciones generales..."></textarea></div>';const ta=$("#permitNotes");ta.value=p.notes||"";ta.addEventListener("input",()=>{p.notes=ta.value;markDirty()})}
-function templatePath(key){return {"AM":"templates/AM.pdf","A1/A2":"templates/A1_A2.pdf","B":"templates/B.pdf","C1/C":"templates/C1_C.pdf","D1/D":"templates/D1_D.pdf"}[key]}
+function templatePath(key){const base="https://www.dgt.es/export/sites/web-DGT/.galleries/downloads/nuestros_servicios/para-colaboradores-y-empresas/autoescuelas/";return {"AM":base+"CUADERNILLO-FORMACION-DGT-AM.pdf","A1/A2":base+"CUADERNILLO-FORMACION-DGT-A1-Y-A2.pdf","B":base+"CUADERNILLO-FORMACION-DGT-B.pdf","C1/C":base+"CUADERNILLO-FORMACION-DGT-C1-C.pdf","D1/D":base+"CUADERNILLO-FORMACION-DGT-PERMISOS-D1-y-D.pdf"}[key]}
 function renderPdf(){
- els.content.innerHTML=`<div class="panel"><h2>PDF oficial DGT</h2><p class="help">Se usa el cuadernillo oficial original como plantilla. La app superpone los datos del alumno y genera una copia PDF sin alterar el documento base.</p><div class="pdfActions"><button id="pdfBase">Descargar plantilla oficial</button><button id="pdfFilled" class="secondary">Generar PDF con datos</button></div><div class="pdfPreview"><p>Permiso: <b>${escapeHtml(DGT_DATA[currentPermit].label)}</b></p><p>Alumno: <b>${escapeHtml(currentStudent().name||"")}</b></p><p>Histórico: <b>${currentPermitData().history.length} clases</b></p></div></div>`;
- $("#pdfBase").addEventListener("click",()=>downloadUrl(templatePath(currentPermit),`DGT-${currentPermit.replace("/","-")}.pdf`));
+ els.content.innerHTML=`<div class="panel"><h2>PDF oficial DGT</h2><p class="help">Se usa el cuadernillo oficial original como plantilla. La app superpone los datos del alumno y genera una copia PDF sin alterar el documento base.</p><div class="pdfActions"><button id="pdfBase">Abrir plantilla oficial</button><button id="pdfFilled" class="secondary">Generar PDF con datos</button></div><div class="pdfPreview"><p>Permiso: <b>${escapeHtml(DGT_DATA[currentPermit].label)}</b></p><p>Alumno: <b>${escapeHtml(currentStudent().name||"")}</b></p><p>Histórico: <b>${currentPermitData().history.length} clases</b></p></div></div>`;
+ $("#pdfBase").addEventListener("click",()=>window.open(templatePath(currentPermit),"_blank"));
  $("#pdfFilled").addEventListener("click",generateOfficialPdf);
 }
 function downloadUrl(url,name){const a=document.createElement("a");a.href=url;a.download=name;document.body.append(a);a.click();a.remove()}
 async function generateOfficialPdf(){
  if(!window.PDFLib){alert("No se ha podido cargar el motor PDF. Conecta una vez a Internet y vuelve a intentarlo.");return}
  try{
-   const bytes=await fetch(templatePath(currentPermit)).then(r=>r.arrayBuffer());
+   const bytes=await fetch(templatePath(currentPermit)).then(r=>{if(!r.ok)throw new Error("PDF no disponible");return r.arrayBuffer()});
    const doc=await PDFLib.PDFDocument.load(bytes), pages=doc.getPages(), font=await doc.embedFont(PDFLib.StandardFonts.Helvetica);
    const s=currentStudent(), p=currentPermitData();
    const pageIndex=currentPermit==="AM"?6:8; const page=pages[Math.min(pageIndex,pages.length-1)];
@@ -105,7 +105,7 @@ async function generateOfficialPdf(){
    let y=748;
    [...p.history].sort((a,b)=>(a.date||"").localeCompare(b.date||"")).forEach((e,i)=>{if(y<70)return;hist.drawText(`${i+1}. ${e.date||""}  ${e.minutes||0} min  ${e.route||""}`.slice(0,95),{x:40,y,size:9,font});y-=16;if(e.notes){hist.drawText(String(e.notes).slice(0,100),{x:55,y,size:8,font});y-=14}});
    const out=await doc.save();const blob=new Blob([out],{type:"application/pdf"}),url=URL.createObjectURL(blob);downloadUrl(url,`Ficha-${(s.name||"alumno").replace(/[^\w\-]+/g,"_")}-${currentPermit.replace("/","-")}.pdf`);setTimeout(()=>URL.revokeObjectURL(url),2000);
- }catch(e){console.error(e);alert("No se ha podido generar el PDF.");}
+ }catch(e){console.error(e);alert("El navegador ha bloqueado la descarga directa del PDF oficial. Al desplegar en Cloudflare añadiremos un proxy local para que la generación sea fiable en iPad y Mac.");}
 }
 function mergeImported(obj){
  const incoming=obj.students||{};Object.values(incoming).forEach(s=>{const old=db.students[s.id];if(!old||new Date(s.updatedAt||0)>=new Date(old.updatedAt||0))db.students[s.id]=s});saveDb();renderAll();
