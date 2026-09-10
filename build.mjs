@@ -8,6 +8,7 @@ const files = [
   'styles.css',
   'manifest.webmanifest',
   'sw.js',
+  'history-enhance.js',
   'pdf-enhance.js'
 ];
 
