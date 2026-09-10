@@ -2,9 +2,11 @@
   "name": "ficha-autoescuela",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "deploy": "wrangler pages deploy .",
-    "dev": "wrangler pages dev ."
+    "build": "node build.mjs",
+    "deploy": "npm run build && wrangler deploy",
+    "dev": "npm run build && wrangler dev"
   },
   "devDependencies": {
     "wrangler": "^4.131.0"
