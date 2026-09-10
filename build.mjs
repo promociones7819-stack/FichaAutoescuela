@@ -5,6 +5,7 @@ const files = [
   'index.html',
   'app.js',
   'data.js',
+  'compat.js',
   'styles.css',
   'manifest.webmanifest',
   'sw.js',
