@@ -10,6 +10,7 @@ const files = [
   'manifest.webmanifest',
   'sw.js',
   'students-ui.js',
+  'ui-simplify.js',
   'history-enhance.js',
   'session-reset.js',
   'class-workflow.js',
