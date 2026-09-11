@@ -12,6 +12,13 @@
   function persistCurrentAppState(){document.querySelector('#saveBtn')?.click()}
   function readDb(){try{return JSON.parse(localStorage.getItem(DBKEY)||'{"students":{}}')}catch{return{students:{}}}}
   function permitKey(){const t=document.querySelector('.permitChip.active')?.textContent?.trim();return Object.keys(window.DGT_DATA||{}).find(k=>window.DGT_DATA[k].label===t)||null}
+  function activeStudentId(db){
+    const stored=localStorage.getItem(ACTIVE_KEY);
+    if(stored&&db.students?.[stored])return stored;
+    const title=document.querySelector('#studentTitle')?.textContent?.trim();
+    if(title){const found=Object.values(db.students||{}).find(s=>(s.name||'').trim()===title);if(found)return found.id;}
+    return null;
+  }
 
   function addVehicleField(){
     const form=document.querySelector('.historyForm');
@@ -58,15 +65,23 @@
   }
 
   function patchSavedClassVehicle(d){
-    const db=readDb();const studentId=localStorage.getItem(ACTIVE_KEY);const permit=permitKey();
-    const pdata=db.students?.[studentId]?.permits?.[permit];if(!pdata)return;
-    const candidates=[...(pdata.history||[])].filter(e=>e.date===d.date && Number(e.minutes||0)===Number(d.minutes||0) && String(e.route||'')===String(d.route||''));
-    const entry=candidates.sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''))[0] || (pdata.history||[]).at(-1);
-    if(entry)entry.vehicleType=d.vehicleType;
-    // Keep a fallback for old cumulative PDFs, but the authoritative value is per class.
+    const db=readDb();const studentId=activeStudentId(db);const permit=permitKey();
+    const pdata=studentId&&permit?db.students?.[studentId]?.permits?.[permit]:null;if(!pdata)return false;
+    const history=pdata.history||[];
+    let entry=[...history]
+      .filter(e=>e.date===d.date && Number(e.minutes||0)===Number(d.minutes||0) && String(e.route||'')===String(d.route||''))
+      .sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''))[0];
+    if(!entry)entry=[...history].sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''))[0]||history.at(-1);
+    if(!entry)return false;
+    entry.vehicleType=d.vehicleType;
+    entry.date=d.date;
+    entry.minutes=d.minutes;
+    entry.route=d.route;
+    entry.notes=d.notes;
     pdata.vehicleType=d.vehicleType;
     db.students[studentId].updatedAt=new Date().toISOString();
     localStorage.setItem(DBKEY,JSON.stringify(db));
+    return true;
   }
 
   function finishClass(){
@@ -77,11 +92,12 @@
       const date=document.querySelector('#hDate'),mins=document.querySelector('#hMinutes'),route=document.querySelector('#hRoute'),notes=document.querySelector('#hNotes'),vehicle=document.querySelector('#hVehicleType');
       if(date)date.value=d.date;if(mins)mins.value=d.minutes||'';if(route)route.value=d.route||'';if(notes)notes.value=d.notes||'';if(vehicle)vehicle.value=d.vehicleType||'';
       const btn=document.querySelector('#addClass');if(btn){btn.dataset.allowOriginal='1';btn.click()}
+      // The original app stores the class first. Patch the just-created entry afterwards.
+      [0,60,180].forEach(delay=>setTimeout(()=>patchSavedClassVehicle(d),delay));
       setTimeout(()=>{
-        patchSavedClassVehicle(d);
         tabs().practical?.click();
         setTimeout(()=>{clearVisibleRatings();persistCurrentAppState();setDraft(null);finishing=false;tabs().history?.click();},0);
-      },20);
+      },220);
     },0);
   }
 
