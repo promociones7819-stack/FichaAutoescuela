@@ -2,8 +2,10 @@
   const DBKEY='ficha-autoescuela-v2';
   const ACTIVE_KEY='ficha-autoescuela-active-student';
   const XCOLS=[424,444,464,484,503];
-  const VEHICLE_X={manual:252,automatico:298,adaptado:357};
-  const VEHICLE_Y=664;
+  // Coordenadas calibradas sobre la ficha oficial (página práctica inicial).
+  // Se usa el centro visual de cada casilla de tipo de vehículo.
+  const VEHICLE_X={manual:293,automatico:356,adaptado:435};
+  const VEHICLE_Y=638;
 
   const LAYOUTS={
     'B':{fields:{pages:[3,8],xName:78,xTeacher:240,xDate:408},groups:{
@@ -73,12 +75,12 @@
   function proxyUrl(permit){return`/api/dgt-pdf?permit=${encodeURIComponent(permit)}`}
   function download(bytes,name){const blob=new Blob([bytes],{type:'application/pdf'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2500)}
   function stampIdentity(pages,font,student,pdata,layout){for(const pi of layout.fields.pages||[]){const page=pages[pi];if(!page)continue;const top=pi===3?151:143,y=page.getHeight()-top;if(student.name)page.drawText(String(student.name).slice(0,42),{x:layout.fields.xName,y,size:8,font});if(student.teacher)page.drawText(String(student.teacher).slice(0,38),{x:layout.fields.xTeacher,y,size:8,font});if(pdata.started)page.drawText(String(pdata.started),{x:layout.fields.xDate,y,size:8,font});}}
-  function stampVehicle(pages,font,vehicleType){const page=pages[3];if(!page)return;const x=VEHICLE_X[vehicleType];if(x==null)return;page.drawText('X',{x:x-3.2,y:VEHICLE_Y,size:9,font});}
+  function stampVehicle(pages,font,vehicleType){const page=pages[3];if(!page)return;const x=VEHICLE_X[vehicleType];if(x==null)return;page.drawText('X',{x:x-3.6,y:VEHICLE_Y-3,size:9,font});}
   function stampRatings(pages,font,ratings,permit,layout){for(const[group,cfg]of Object.entries(layout.groups||{})){const items=window.DGT_DATA?.[permit]?.practical?.[group]||[],page=pages[cfg.page];if(!page)continue;const h=page.getHeight();items.forEach((item,i)=>{const value=Number(ratings?.[item])||0;if(value<1||value>5||cfg.ys[i]==null)return;page.drawText('X',{x:XCOLS[value-1]-2.5,y:h-(cfg.ys[i]+8),size:9,font});});}}
   function stampSummary(pages,font,ratings,permit,layout){if(!layout.summary)return;const page=pages[layout.summary.page];if(!page)return;const h=page.getHeight();for(const[group,cfg]of Object.entries(layout.summary.groups||{})){const items=window.DGT_DATA?.[permit]?.practical?.[group]||[];items.forEach((item,i)=>{const value=Number(ratings?.[item])||0;if(!value||cfg.xs[i]==null||cfg.ys[i]==null)return;page.drawText('X',{x:cfg.xs[i]-3,y:h-(cfg.ys[i]+4),size:9,font});});}}
   function historyUpTo(pdata,selected=null){const history=[...(pdata.history||[])].sort((a,b)=>{const d=(a.date||'').localeCompare(b.date||'');return d||(a.createdAt||'').localeCompare(b.createdAt||'')});if(!selected)return history;const idx=history.findIndex(e=>e.id===selected.id);return idx>=0?history.slice(0,idx+1):history}
   function niceRoute(value){let s=String(value||'').replace(/\s+/g,' ').trim();if(!s)return'';return s.charAt(0).toUpperCase()+s.slice(1)}
-  function stampItinerary(pages,font,pdata,layout,selected=null){if(layout.itineraryPage==null)return;const page=pages[layout.itineraryPage];if(!page)return;const h=page.getHeight();historyUpTo(pdata,selected).slice(0,30).forEach((entry,i)=>{const route=niceRoute(entry.route);if(!route)return;const yTop=ITINERARY_TOPS[i];page.drawText(route.slice(0,70),{x:140,y:h-(yTop+8),size:7.3,font});});}
+  function stampItinerary(pages,font,pdata,layout,selected=null){if(layout.itineraryPage==null)return;const page=pages[layout.itineraryPage];if(!page)return;const h=page.getHeight();historyUpTo(pdata,selected).slice(0,30).forEach((entry,i)=>{const route=niceRoute(entry.route);if(!route)return;const yTop=ITINERARY_TOPS[i];page.drawText(route.slice(0,70),{x:148,y:h-(yTop+8),size:7.5,font});});}
   function cumulativeRatings(pdata,selected=null){const result={};for(const entry of historyUpTo(pdata,selected)){for(const[item,value]of Object.entries(entry.ratings||{})){const n=Number(value)||0;if(n>=1&&n<=5)result[item]=n}}return result}
   function latestVehicleType(pdata,selected=null){const hist=historyUpTo(pdata,selected).filter(e=>e.vehicleType);return hist.length?hist[hist.length-1].vehicleType:(pdata.vehicleType||'')}
 
