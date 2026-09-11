@@ -1,5 +1,5 @@
 const CACHE='ficha-autoescuela-v18';
-const ASSETS=['./','index.html','styles.css','app.js?v=18','data.js?v=18','compat.js?v=18','students-ui.js?v=18','home-admin.js?v=18','ui-simplify.js?v=18','pdf-center-fix.js?v=18','pdf-class-context.js?v=18','pdf-v11.js?v=18','history-enhance.js?v=18','session-reset.js?v=18','class-workflow.js?v=18','history-edit.js?v=18','pdf-enhance.js?v=18','manifest.webmanifest'];
+const ASSETS=['./','index.html','styles.css','app.js?v=18','data.js?v=18','compat.js?v=18','students-ui.js?v=18','home-admin.js?v=18','ui-simplify.js?v=18','backup-enhance.js?v=18','pdf-center-fix.js?v=18','pdf-class-context.js?v=18','pdf-v11.js?v=18','history-enhance.js?v=18','session-reset.js?v=18','class-workflow.js?v=18','history-edit.js?v=18','pdf-enhance.js?v=18','manifest.webmanifest'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS))).then(()=>self.skipWaiting()));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{
