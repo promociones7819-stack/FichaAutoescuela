@@ -1,5 +1,6 @@
 (() => {
   const DBKEY = 'ficha-autoescuela-v2';
+  const ACTIVE_KEY = 'ficha-autoescuela-active-student';
   const XCOLS = [424, 444, 464, 484, 503];
 
   const LAYOUTS = {
@@ -56,26 +57,54 @@
 
   const ITINERARY_TOPS = [176,198,218,238,259,279,298,316,335,353,371,390,408,427,445,464,482,500,519,537,556,574,593,611,629,648,666,685,703,722];
 
+  const style = document.createElement('style');
+  style.textContent = `
+    .pdfClassBox{margin-top:14px;padding:14px;border:1px solid var(--line);border-radius:14px;background:#fff}
+    .pdfClassBox label{margin:0 0 8px}.pdfClassActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .pdfClassActions button{flex:1;min-width:220px}.pdfHint{font-size:13px;color:var(--muted);margin-top:8px;line-height:1.45}
+  `;
+  document.head.appendChild(style);
+
+  function readDb(){
+    try { return JSON.parse(localStorage.getItem(DBKEY) || '{"students":{}}'); }
+    catch { return {students:{}}; }
+  }
+
   function getActiveContext() {
-    const db = JSON.parse(localStorage.getItem(DBKEY) || '{"students":{}}');
-    const buttons = [...document.querySelectorAll('#studentList .studentBtn')];
-    const active = document.querySelector('#studentList .studentBtn.active');
-    if (!active) return null;
-    const q = (document.querySelector('#studentSearch')?.value || '').trim().toLowerCase();
-    const rows = Object.values(db.students || {}).filter(s => (s.name || '').toLowerCase().includes(q)).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-    const student = rows[buttons.indexOf(active)];
-    if (!student) return null;
-    const activePermitText = document.querySelector('.permitChip.active')?.textContent?.trim();
-    const permit = Object.keys(window.DGT_DATA || {}).find(k => window.DGT_DATA[k].label === activePermitText);
-    if (!permit || !student.permits?.[permit]) return null;
+    const db = readDb();
+    const permitText = document.querySelector('.permitChip.active')?.textContent?.trim();
+    const permit = Object.keys(window.DGT_DATA || {}).find(k => window.DGT_DATA[k].label === permitText);
+    if (!permit) return null;
+
+    let student = null;
+    const activeId = localStorage.getItem(ACTIVE_KEY);
+    if (activeId && db.students?.[activeId]) student = db.students[activeId];
+
+    if (!student) {
+      const title = document.querySelector('#studentTitle')?.textContent?.trim();
+      if (title) student = Object.values(db.students || {}).find(s => (s.name || '').trim() === title);
+    }
+
+    if (!student) {
+      const buttons = [...document.querySelectorAll('#studentList .studentBtn')];
+      const active = document.querySelector('#studentList .studentBtn.active');
+      if (active) {
+        const rows = Object.values(db.students || {}).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+        student = rows[buttons.indexOf(active)] || null;
+      }
+    }
+
+    if (!student || !student.permits?.[permit]) return null;
     return { student, permit, pdata: student.permits[permit] };
   }
 
   function proxyUrl(permit) { return `/api/dgt-pdf?permit=${encodeURIComponent(permit)}`; }
+
   function downloadBlob(bytes, name) {
     const blob = new Blob([bytes], {type:'application/pdf'});
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+    const a = document.createElement('a');
+    a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url), 2500);
   }
 
@@ -90,39 +119,48 @@
     }
   }
 
-  function stampRatings(pages,font,pdata,permit,layout){
+  function stampRatings(pages,font,ratings,permit,layout){
     for (const [group,cfg] of Object.entries(layout.groups || {})) {
       const items = window.DGT_DATA?.[permit]?.practical?.[group] || [];
       const page = pages[cfg.page]; if (!page) continue;
       const h = page.getHeight();
       items.forEach((item,i)=>{
-        const value = Number(pdata.practical?.[item]) || 0;
+        const value = Number(ratings?.[item]) || 0;
         if (value < 1 || value > 5 || cfg.ys[i] == null) return;
         page.drawText('X',{x:XCOLS[value-1]-2.5,y:h-(cfg.ys[i]+8),size:9,font});
       });
     }
   }
 
-  function stampSummary(pages,font,pdata,permit,layout){
+  function stampSummary(pages,font,ratings,permit,layout){
     if (!layout.summary) return;
     const page = pages[layout.summary.page]; if (!page) return;
     const h = page.getHeight();
     for (const [group,cfg] of Object.entries(layout.summary.groups || {})) {
       const items = window.DGT_DATA?.[permit]?.practical?.[group] || [];
       items.forEach((item,i)=>{
-        const value = Number(pdata.practical?.[item]) || 0;
+        const value = Number(ratings?.[item]) || 0;
         if (!value || cfg.xs[i] == null || cfg.ys[i] == null) return;
         page.drawText('X',{x:cfg.xs[i]-3,y:h-(cfg.ys[i]+4),size:9,font});
       });
     }
   }
 
-  function stampItinerary(pages,font,pdata,layout){
+  function historyUpTo(pdata, selectedEntry=null){
+    const history=[...(pdata.history||[])].sort((a,b)=>{
+      const d=(a.date||'').localeCompare(b.date||'');
+      return d || (a.createdAt||'').localeCompare(b.createdAt||'');
+    });
+    if (!selectedEntry) return history;
+    const idx=history.findIndex(e=>e.id===selectedEntry.id);
+    return idx>=0 ? history.slice(0,idx+1) : history;
+  }
+
+  function stampItinerary(pages,font,pdata,layout,selectedEntry=null){
     if (layout.itineraryPage == null) return;
     const page = pages[layout.itineraryPage]; if (!page) return;
     const h = page.getHeight();
-    const history = [...(pdata.history || [])].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
-    history.slice(0,30).forEach((entry,i)=>{
+    historyUpTo(pdata,selectedEntry).slice(0,30).forEach((entry,i)=>{
       const route = String(entry.route || '').trim();
       if (!route) return;
       const yTop = ITINERARY_TOPS[i];
@@ -130,34 +168,112 @@
     });
   }
 
-  async function generate() {
+  function cumulativeRatings(pdata, selectedEntry=null){
+    const result={};
+    for (const entry of historyUpTo(pdata,selectedEntry)) {
+      for (const [item,value] of Object.entries(entry.ratings || {})) {
+        const n=Number(value)||0;
+        if(n>=1&&n<=5) result[item]=n;
+      }
+    }
+    return result;
+  }
+
+  async function generate(mode='cumulative', classId=null) {
     const ctx = getActiveContext();
-    if (!ctx) return alert('Selecciona un alumno y un permiso.');
+    if (!ctx) return alert('No se ha podido identificar el alumno o el permiso activo. Vuelve a abrir la ficha desde Alumnos.');
     if (!window.PDFLib) return alert('No se ha cargado el motor PDF.');
     const layout = LAYOUTS[ctx.permit];
     if (!layout) return alert('Este permiso todavía no tiene plantilla calibrada.');
+
+    const selectedEntry = classId ? (ctx.pdata.history || []).find(e=>e.id===classId) : null;
+    if (mode==='class' && !selectedEntry) return alert('Selecciona una clase.');
+
     try {
-      const response = await fetch(proxyUrl(ctx.permit));
-      if (!response.ok) throw new Error('No se pudo obtener el PDF oficial');
+      const response = await fetch(proxyUrl(ctx.permit), {cache:'no-store'});
+      if (!response.ok) throw new Error(`PDF oficial no disponible (${response.status})`);
       const doc = await PDFLib.PDFDocument.load(await response.arrayBuffer());
       const font = await doc.embedFont(PDFLib.StandardFonts.Helvetica);
       const pages = doc.getPages();
+      const ratings = mode==='class' ? (selectedEntry.ratings || {}) : cumulativeRatings(ctx.pdata);
+
       stampIdentity(pages,font,ctx.student,ctx.pdata,layout);
-      stampRatings(pages,font,ctx.pdata,ctx.permit,layout);
-      stampSummary(pages,font,ctx.pdata,ctx.permit,layout);
-      stampItinerary(pages,font,ctx.pdata,layout);
-      downloadBlob(await doc.save(), `Ficha-${(ctx.student.name||'alumno').replace(/[^\w\-]+/g,'_')}-${ctx.permit.replace('/','-')}.pdf`);
+      stampRatings(pages,font,ratings,ctx.permit,layout);
+      stampSummary(pages,font,ratings,ctx.permit,layout);
+      stampItinerary(pages,font,ctx.pdata,layout,mode==='class'?selectedEntry:null);
+
+      const safeName=(ctx.student.name||'alumno').replace(/[^\p{L}\p{N}_-]+/gu,'_');
+      const permit=ctx.permit.replace('/','-');
+      const suffix=mode==='class' ? `-${selectedEntry.date||'clase'}` : '-acumulado';
+      downloadBlob(await doc.save(), `Ficha-${safeName}-${permit}${suffix}.pdf`);
     } catch (err) {
-      console.error(err); alert('No se ha podido generar el PDF oficial. Comprueba la conexión.');
+      console.error(err);
+      alert('No se ha podido obtener el PDF oficial desde Cloudflare. Recarga la aplicación e inténtalo de nuevo.');
     }
   }
 
+  function renderPdfControls(){
+    const panel=[...document.querySelectorAll('#tabContent .panel')].find(p=>p.querySelector('h2')?.textContent?.includes('PDF oficial'));
+    if(!panel || panel.dataset.classPdf==='1') return;
+    const ctx=getActiveContext();
+    if(!ctx) return;
+    panel.dataset.classPdf='1';
+
+    const oldFilled=panel.querySelector('#pdfFilled');
+    if(oldFilled){oldFilled.textContent='Generar PDF acumulado'; oldFilled.dataset.mode='cumulative';}
+
+    const box=document.createElement('div');
+    box.className='pdfClassBox';
+    const history=[...(ctx.pdata.history||[])].sort((a,b)=>{
+      const d=(b.date||'').localeCompare(a.date||'');
+      return d || (b.createdAt||'').localeCompare(a.createdAt||'');
+    });
+
+    box.innerHTML=`<label><strong>PDF de una clase concreta</strong></label>
+      <select id="pdfClassSelect" ${history.length?'':'disabled'}></select>
+      <div class="pdfClassActions"><button type="button" id="pdfClassDownload" ${history.length?'':'disabled'}>Descargar PDF de la clase seleccionada</button></div>
+      <div class="pdfHint">Cada PDF de clase usa exactamente las puntuaciones guardadas en esa sesión. El PDF acumulado muestra el último nivel alcanzado hasta hoy.</div>`;
+
+    const select=box.querySelector('#pdfClassSelect');
+    if(!history.length){
+      const o=document.createElement('option'); o.textContent='Todavía no hay clases guardadas'; select.append(o);
+    }else{
+      history.forEach((e,i)=>{
+        const o=document.createElement('option');
+        o.value=e.id;
+        const route=e.route?` · ${e.route}`:'';
+        const mins=e.minutes?` · ${e.minutes} min`:'';
+        o.textContent=`${e.date||'Sin fecha'}${route}${mins}`;
+        if(i===0)o.selected=true;
+        select.append(o);
+      });
+    }
+    panel.append(box);
+  }
+
+  const observer=new MutationObserver(renderPdfControls);
+  observer.observe(document.querySelector('#tabContent')||document.body,{childList:true,subtree:true});
+  renderPdfControls();
+
   document.addEventListener('click', e => {
-    const target = e.target.closest('#pdfFilled, #pdfBase');
+    const target = e.target.closest('#pdfFilled, #pdfBase, #pdfClassDownload');
     if (!target) return;
-    const ctx = getActiveContext(); if (!ctx) return;
-    e.preventDefault(); e.stopImmediatePropagation();
-    if (target.id === 'pdfBase') window.open(proxyUrl(ctx.permit),'_blank');
-    else generate();
+
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+
+    const ctx = getActiveContext();
+    if (!ctx) return alert('No se ha podido identificar el alumno o el permiso activo. Vuelve a abrir la ficha desde Alumnos.');
+
+    if (target.id === 'pdfBase') {
+      window.open(proxyUrl(ctx.permit),'_blank');
+      return;
+    }
+    if (target.id === 'pdfClassDownload') {
+      const id=document.querySelector('#pdfClassSelect')?.value;
+      return generate('class',id);
+    }
+    generate('cumulative');
   }, true);
 })();
