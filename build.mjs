@@ -9,6 +9,7 @@ const files = [
   'styles.css',
   'manifest.webmanifest',
   'sw.js',
+  'navigation-boot.js',
   'students-ui.js',
   'home-admin.js',
   'ui-simplify.js',
