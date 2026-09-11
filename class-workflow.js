@@ -74,11 +74,12 @@
     if(!entry)entry=[...history].sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''))[0]||history.at(-1);
     if(!entry)return false;
     entry.vehicleType=d.vehicleType;
+    entry.vehicleLabel=vehicleLabel(d.vehicleType);
     entry.date=d.date;
     entry.minutes=d.minutes;
     entry.route=d.route;
     entry.notes=d.notes;
-    pdata.vehicleType=d.vehicleType;
+    entry.updatedAt=new Date().toISOString();
     db.students[studentId].updatedAt=new Date().toISOString();
     localStorage.setItem(DBKEY,JSON.stringify(db));
     return true;
@@ -92,12 +93,20 @@
       const date=document.querySelector('#hDate'),mins=document.querySelector('#hMinutes'),route=document.querySelector('#hRoute'),notes=document.querySelector('#hNotes'),vehicle=document.querySelector('#hVehicleType');
       if(date)date.value=d.date;if(mins)mins.value=d.minutes||'';if(route)route.value=d.route||'';if(notes)notes.value=d.notes||'';if(vehicle)vehicle.value=d.vehicleType||'';
       const btn=document.querySelector('#addClass');if(btn){btn.dataset.allowOriginal='1';btn.click()}
-      // The original app stores the class first. Patch the just-created entry afterwards.
-      [0,60,180].forEach(delay=>setTimeout(()=>patchSavedClassVehicle(d),delay));
       setTimeout(()=>{
         tabs().practical?.click();
-        setTimeout(()=>{clearVisibleRatings();persistCurrentAppState();setDraft(null);finishing=false;tabs().history?.click();},0);
-      },220);
+        setTimeout(()=>{
+          clearVisibleRatings();
+          // The base app writes its in-memory state here. Do this first.
+          persistCurrentAppState();
+          // Then add vehicleType to the persisted class so the base app cannot overwrite it.
+          setTimeout(()=>{
+            patchSavedClassVehicle(d);
+            setDraft(null);finishing=false;
+            tabs().history?.click();
+          },80);
+        },0);
+      },40);
     },0);
   }
 
