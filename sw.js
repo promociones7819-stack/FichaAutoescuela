@@ -1,5 +1,5 @@
-const CACHE='ficha-autoescuela-v8';
-const ASSETS=['./','index.html','styles.css','app.js?v=8','data.js?v=8','compat.js?v=8','students-ui.js?v=8','history-enhance.js?v=8','session-reset.js?v=8','class-workflow.js?v=8','pdf-enhance.js?v=8','manifest.webmanifest'];
+const CACHE='ficha-autoescuela-v9';
+const ASSETS=['./','index.html','styles.css','app.js?v=9','data.js?v=9','compat.js?v=9','students-ui.js?v=9','ui-simplify.js?v=9','history-enhance.js?v=9','session-reset.js?v=9','class-workflow.js?v=9','pdf-enhance.js?v=9','manifest.webmanifest'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS))).then(()=>self.skipWaiting()));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{
