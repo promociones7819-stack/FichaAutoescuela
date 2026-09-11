@@ -1,6 +1,7 @@
 (() => {
   const DBKEY = 'ficha-autoescuela-v2';
   const RETURN_KEY = 'ficha-autoescuela-open-student';
+  const ACTIVE_KEY = 'ficha-autoescuela-active-student';
 
   const style = document.createElement('style');
   style.textContent = `
@@ -132,6 +133,7 @@
   }
 
   function openStudent(id){
+    localStorage.setItem(ACTIVE_KEY,id);
     sessionStorage.setItem(RETURN_KEY,id);
     location.reload();
   }
@@ -140,9 +142,10 @@
   legacyNew?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();showStudents();renderForm();},true);
 
   // After reload from the management screen, automatically open the student just created/selected.
-  const wanted=sessionStorage.getItem(RETURN_KEY);
+  const wanted=sessionStorage.getItem(RETURN_KEY) || localStorage.getItem(ACTIVE_KEY);
   if(wanted){
     sessionStorage.removeItem(RETURN_KEY);
+    localStorage.setItem(ACTIVE_KEY,wanted);
     setTimeout(()=>{
       const db=readDb(); const target=db.students?.[wanted]; if(!target)return;
       const buttons=[...document.querySelectorAll('#studentList .studentBtn')];
