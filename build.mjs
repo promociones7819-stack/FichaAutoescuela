@@ -11,6 +11,8 @@ const files = [
   'sw.js',
   'students-ui.js',
   'ui-simplify.js',
+  'vehicle-type.js',
+  'pdf-v11.js',
   'history-enhance.js',
   'session-reset.js',
   'class-workflow.js',
