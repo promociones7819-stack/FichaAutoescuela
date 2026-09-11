@@ -12,6 +12,7 @@ const files = [
   'students-ui.js',
   'home-admin.js',
   'ui-simplify.js',
+  'backup-enhance.js',
   'vehicle-type.js',
   'pdf-center-fix.js',
   'pdf-class-context.js',
