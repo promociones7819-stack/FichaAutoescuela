@@ -16,6 +16,7 @@ const files = [
   'history-enhance.js',
   'session-reset.js',
   'class-workflow.js',
+  'history-edit.js',
   'pdf-enhance.js'
 ];
 
