@@ -1,5 +1,5 @@
-const CACHE='ficha-autoescuela-v14';
-const ASSETS=['./','index.html','styles.css','app.js?v=14','data.js?v=14','compat.js?v=14','students-ui.js?v=14','ui-simplify.js?v=14','pdf-v11.js?v=14','history-enhance.js?v=14','session-reset.js?v=14','class-workflow.js?v=14','history-edit.js?v=14','pdf-enhance.js?v=14','manifest.webmanifest'];
+const CACHE='ficha-autoescuela-v15';
+const ASSETS=['./','index.html','styles.css','app.js?v=15','data.js?v=15','compat.js?v=15','students-ui.js?v=15','ui-simplify.js?v=15','pdf-v11.js?v=15','history-enhance.js?v=15','session-reset.js?v=15','class-workflow.js?v=15','history-edit.js?v=15','pdf-enhance.js?v=15','manifest.webmanifest'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS))).then(()=>self.skipWaiting()));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{
