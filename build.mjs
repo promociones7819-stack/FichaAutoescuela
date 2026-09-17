@@ -4,6 +4,8 @@ import { existsSync } from 'node:fs';
 const files = [
   'index.html',
   'app.js',
+  'reduced.js',
+  'reduced.css',
   'data.js',
   'compat.js',
   'styles.css',

@@ -3,6 +3,10 @@
 PWA local optimizada para iPad/Mac basada en los cuadernillos de seguimiento de la DGT.
 
 ## Incluye
+- Ficha reducida con ocho bloques, objetivos plegables y ajuste Aumentar/Mantener/Bajar basado en la última clase del permiso.
+- Resultado y observación por objetivo, respuestas habituales y texto libre, conexión/feeling y registro acumulado de faltas DD-MM-AAAA.
+- Borrador local por alumno y permiso; consulta y edición de fichas reducidas desde el histórico. Las copias JSON incluyen estos datos.
+- Las escalas reducida (cuatro niveles) y oficial (1–5) se mantienen separadas. Las clases antiguas se consultan como referencia sin convertir automáticamente sus puntuaciones.
 - Alumnos sin fotografías.
 - Uno o varios permisos por alumno.
 - AM, A1/A2, B, C1/C y D1/D.
@@ -28,6 +32,10 @@ La ruta `/api/dgt-pdf` es una Cloudflare Pages Function que obtiene únicamente 
 El rellenado se realiza en el navegador con `pdf-lib`: se conserva el cuadernillo oficial completo y se superponen las valoraciones en las casillas de progreso de las páginas prácticas. El archivo `pdf-enhance.js` contiene la calibración de coordenadas para AM, A1/A2, B, C1/C y D1/D.
 
 ## Despliegue en Cloudflare Pages
+La compilación incluye `reduced.js` y `reduced.css`. La caché de la PWA se actualiza a v18.
+
+Prueba funcional: `node test-reduced.cjs` (requiere Playwright y Chromium instalados).
+
 Conecta este repositorio a Cloudflare Pages.
 
 Configuración recomendada:
